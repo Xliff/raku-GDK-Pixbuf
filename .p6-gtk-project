@@ -1,0 +1,8 @@
+prefix=GDK::
+modules=GDK::Raw::Types
+backups=backup,bitbucket,google-backup,azure-backup,hut
+hfile-prefix=
+lib=gdk-pixbuf
+include-directory=
+idir-avail=True
+build_exclude=Raw/Traps.pm6
