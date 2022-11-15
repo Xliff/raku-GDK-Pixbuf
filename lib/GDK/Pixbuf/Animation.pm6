@@ -1,6 +1,7 @@
 use v6.c;
 
 use Method::Also;
+use NativeCall;
 
 use GDK::Pixbuf::Raw::Types;
 use GDK::Pixbuf::Raw::Animation;
@@ -114,7 +115,7 @@ class GDK::Pixbuf::Animation {
       $cancellable,
       $error
     );
-    set_erorr($error);
+    set_error($error);
 
     $gdk-pixbuf-anim ?? self.bless( :$gdk-pixbuf-anim ) !! Nil;
   }
@@ -129,7 +130,7 @@ class GDK::Pixbuf::Animation {
     gpointer        $user_data    = gpointer,
     GCancellable() :$cancellable  = GCancellable
   ) {
-    samewith($stream, $cancellable, $callback, $user_data);
+    samewith($stream, $cancellable, &callback, $user_data);
   }
   multi method new_from_stream_async (
     GInputStream() $stream,
@@ -140,7 +141,7 @@ class GDK::Pixbuf::Animation {
     gdk_pixbuf_animation_new_from_stream_async(
       $stream,
       $cancellable,
-      $callback,
+      &callback,
       $user_data
     );
   }
@@ -164,10 +165,7 @@ class GDK::Pixbuf::Animation {
     gdk_pixbuf_animation_get_height($!gpa);
   }
 
-  method get_iter (
-    GdkPixbufAnimation() $animation,
-    Int()                $start_time
-  )
+  method get_iter (Int() $start_time, :$raw = False)
     is also<get-iter>
   {
     my GTimeVal $s = $start_time;
@@ -274,8 +272,8 @@ class GDK::Pixbuf::NonAnim {
     gdk_pixbuf_non_anim_get_type();
   }
 
-  method new {
-    gdk_pixbuf_non_anim_new();
+  method new (GdkPixbuf() $pixbuf) {
+    gdk_pixbuf_non_anim_new($pixbuf);
   }
 
 }
