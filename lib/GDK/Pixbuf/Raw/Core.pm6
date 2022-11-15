@@ -1,4 +1,15 @@
+use v6.c;
 
+use NativeCall;
+
+use GLib::Raw::Definitions;
+use GLib::Raw::Structs;
+use GIO::Raw::Definitions;
+use GDK::Pixbuf::Raw::Definitions;
+use GDK::Pixbuf::Raw::Enums;
+use GDK::Pixbuf::Raw::Structs;
+
+unit package GDK::Pixbuf::Raw::Core;
 
 ### /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h
 
@@ -8,13 +19,13 @@ sub gdk_pixbuf_add_alpha (
   Str       $r,
   Str       $g,
   Str       $b
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_apply_embedded_orientation (GdkPixbuf $src) 
+sub gdk_pixbuf_apply_embedded_orientation (GdkPixbuf $src)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -26,13 +37,13 @@ sub gdk_pixbuf_calculate_rowstride (
   gint          $bits_per_sample,
   gint          $width,
   gint          $height
-) 
+)
   returns gint
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_copy (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_copy (GdkPixbuf $pixbuf)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -47,7 +58,7 @@ sub gdk_pixbuf_copy_area (
   GdkPixbuf $dest_pixbuf,
   gint      $dest_x,
   gint      $dest_y
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -55,13 +66,13 @@ sub gdk_pixbuf_copy_area (
 sub gdk_pixbuf_copy_options (
   GdkPixbuf $src_pixbuf,
   GdkPixbuf $dest_pixbuf
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_error_quark  
+sub gdk_pixbuf_error_quark
   returns GQuark
   is      native(gdk-pixbuf)
   is      export
@@ -70,42 +81,42 @@ sub gdk_pixbuf_error_quark
 sub gdk_pixbuf_fill (
   GdkPixbuf $pixbuf,
   guint32   $pixel
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_bits_per_sample (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_bits_per_sample (GdkPixbuf $pixbuf)
   returns gint
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_byte_length (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_byte_length (GdkPixbuf $pixbuf)
   returns gsize
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_colorspace (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_colorspace (GdkPixbuf $pixbuf)
   returns GdkColorspace
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_has_alpha (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_has_alpha (GdkPixbuf $pixbuf)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_height (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_height (GdkPixbuf $pixbuf)
   returns gint
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_n_channels (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_n_channels (GdkPixbuf $pixbuf)
   returns gint
   is      native(gdk-pixbuf)
   is      export
@@ -114,19 +125,19 @@ sub gdk_pixbuf_get_n_channels (GdkPixbuf $pixbuf)
 sub gdk_pixbuf_get_option (
   GdkPixbuf $pixbuf,
   Str       $key
-) 
+)
   returns Str
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_options (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_options (GdkPixbuf $pixbuf)
   returns GHashTable
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_pixels (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_pixels (GdkPixbuf $pixbuf)
   returns Str
   is      native(gdk-pixbuf)
   is      export
@@ -135,25 +146,25 @@ sub gdk_pixbuf_get_pixels (GdkPixbuf $pixbuf)
 sub gdk_pixbuf_get_pixels_with_length (
   GdkPixbuf $pixbuf,
   guint     $length is rw
-) 
+)
   returns Str
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_rowstride (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_rowstride (GdkPixbuf $pixbuf)
   returns gint
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_type  
+sub gdk_pixbuf_get_type
   returns GType
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_get_width (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_get_width (GdkPixbuf $pixbuf)
   returns gint
   is      native(gdk-pixbuf)
   is      export
@@ -165,7 +176,7 @@ sub gdk_pixbuf_new (
   gint          $bits_per_sample,
   gint          $width,
   gint          $height
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -179,23 +190,23 @@ sub gdk_pixbuf_new_from_bytes (
   gint          $width,
   gint          $height,
   gint          $rowstride
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
 { * }
 
 sub gdk_pixbuf_new_from_data (
-  Str                    $data,
+  CArray[uint8]          $data,
   GdkColorspace          $colorspace,
   gboolean               $has_alpha,
   gint                   $bits_per_sample,
   gint                   $width,
   gint                   $height,
   gint                   $rowstride,
-  GdkPixbufDestroyNotify $destroy_fn,
+                         &destroy_fn (gpointer),
   gpointer               $destroy_fn_data
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -204,7 +215,7 @@ sub gdk_pixbuf_new_from_data (
 sub gdk_pixbuf_new_from_file (
   Str                     $filename,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -216,7 +227,7 @@ sub gdk_pixbuf_new_from_file_at_scale (
   gint                    $height,
   gboolean                $preserve_aspect_ratio,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -228,7 +239,7 @@ sub gdk_pixbuf_new_from_file_at_scale_utf8 (
   gint                    $height,
   gboolean                $preserve_aspect_ratio,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -239,7 +250,7 @@ sub gdk_pixbuf_new_from_file_at_size (
   gint                    $width,
   gint                    $height,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -250,7 +261,7 @@ sub gdk_pixbuf_new_from_file_at_size_utf8 (
   gint                    $width,
   gint                    $height,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -259,7 +270,7 @@ sub gdk_pixbuf_new_from_file_at_size_utf8 (
 sub gdk_pixbuf_new_from_file_utf8 (
   Str                     $filename,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -267,10 +278,10 @@ sub gdk_pixbuf_new_from_file_utf8 (
 
 sub gdk_pixbuf_new_from_inline (
   gint                    $data_length,
-  guint8                  $data is rw,
+  CArray[guint8]          $data,
   gboolean                $copy_pixels,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -279,7 +290,7 @@ sub gdk_pixbuf_new_from_inline (
 sub gdk_pixbuf_new_from_resource (
   Str                     $resource_path,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -291,7 +302,7 @@ sub gdk_pixbuf_new_from_resource_at_scale (
   gint                    $height,
   gboolean                $preserve_aspect_ratio,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -301,7 +312,7 @@ sub gdk_pixbuf_new_from_stream (
   GInputStream            $stream,
   GCancellable            $cancellable,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -312,7 +323,7 @@ sub gdk_pixbuf_new_from_stream_async (
   GCancellable        $cancellable,
   GAsyncReadyCallback $callback,
   gpointer            $user_data
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -324,7 +335,7 @@ sub gdk_pixbuf_new_from_stream_at_scale (
   gboolean                $preserve_aspect_ratio,
   GCancellable            $cancellable,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -338,7 +349,7 @@ sub gdk_pixbuf_new_from_stream_at_scale_async (
   GCancellable        $cancellable,
   GAsyncReadyCallback $callback,
   gpointer            $user_data
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -346,13 +357,13 @@ sub gdk_pixbuf_new_from_stream_at_scale_async (
 sub gdk_pixbuf_new_from_stream_finish (
   GAsyncResult            $async_result,
   CArray[Pointer[GError]] $error
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_new_from_xpm_data (CArray[Str] $data) 
+sub gdk_pixbuf_new_from_xpm_data (CArray[Str] $data)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -364,25 +375,25 @@ sub gdk_pixbuf_new_subpixbuf (
   gint      $src_y,
   gint      $width,
   gint      $height
-) 
+)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_read_pixel_bytes (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_read_pixel_bytes (GdkPixbuf $pixbuf)
   returns GBytes
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_read_pixels (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_read_pixels (GdkPixbuf $pixbuf)
   returns guint8
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_ref (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_ref (GdkPixbuf $pixbuf)
   returns GdkPixbuf
   is      native(gdk-pixbuf)
   is      export
@@ -391,7 +402,7 @@ sub gdk_pixbuf_ref (GdkPixbuf $pixbuf)
 sub gdk_pixbuf_remove_option (
   GdkPixbuf $pixbuf,
   Str       $key
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -402,7 +413,7 @@ sub gdk_pixbuf_saturate_and_pixelate (
   GdkPixbuf $dest,
   gfloat    $saturation,
   gboolean  $pixelate
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -412,7 +423,7 @@ sub gdk_pixbuf_save (
   Str                     $filename,
   Str                     $type,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -424,7 +435,7 @@ sub gdk_pixbuf_save_to_buffer (
   gsize                   $buffer_size,
   Str                     $type,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -438,7 +449,7 @@ sub gdk_pixbuf_save_to_bufferv (
   CArray[Str]             $option_keys,
   CArray[Str]             $option_values,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -446,11 +457,17 @@ sub gdk_pixbuf_save_to_bufferv (
 
 sub gdk_pixbuf_save_to_callback (
   GdkPixbuf               $pixbuf,
-  GdkPixbufSaveFunc       $save_func,
+                          &save_func (
+                            Str,
+                            gsize,
+                            CArray[Pointer[GError]],
+                            gpointer
+                            --> gboolean
+                          ),
   gpointer                $user_data,
   Str                     $type,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -458,13 +475,19 @@ sub gdk_pixbuf_save_to_callback (
 
 sub gdk_pixbuf_save_to_callbackv (
   GdkPixbuf               $pixbuf,
-  GdkPixbufSaveFunc       $save_func,
+                          &save_func (
+                            Str,
+                            gsize,
+                            CArray[Pointer[GError]],
+                            gpointer
+                            --> gboolean
+                          ),
   gpointer                $user_data,
   Str                     $type,
   CArray[Str]             $option_keys,
   CArray[Str]             $option_values,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -476,7 +499,7 @@ sub gdk_pixbuf_save_to_stream (
   Str                     $type,
   GCancellable            $cancellable,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -487,9 +510,9 @@ sub gdk_pixbuf_save_to_stream_async (
   GOutputStream       $stream,
   Str                 $type,
   GCancellable        $cancellable,
-  GAsyncReadyCallback $callback,
+                      &callback (GdkPixbuf, GAsyncResult, gpointer),
   gpointer            $user_data
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -497,7 +520,7 @@ sub gdk_pixbuf_save_to_stream_async (
 sub gdk_pixbuf_save_to_stream_finish (
   GAsyncResult            $async_result,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -511,7 +534,7 @@ sub gdk_pixbuf_save_to_streamv (
   CArray[Str]             $option_values,
   GCancellable            $cancellable,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -524,9 +547,9 @@ sub gdk_pixbuf_save_to_streamv_async (
   CArray[Str]         $option_keys,
   CArray[Str]         $option_values,
   GCancellable        $cancellable,
-  GAsyncReadyCallback $callback,
+                      &callback (GdkPixbuf, GAsyncResult, gpointer),
   gpointer            $user_data
-) 
+)
   is      native(gdk-pixbuf)
   is      export
 { * }
@@ -538,7 +561,7 @@ sub gdk_pixbuf_savev (
   CArray[Str]             $option_keys,
   CArray[Str]             $option_values,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -551,7 +574,7 @@ sub gdk_pixbuf_savev_utf8 (
   CArray[Str]             $option_keys,
   CArray[Str]             $option_values,
   CArray[Pointer[GError]] $error
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
@@ -561,14 +584,13 @@ sub gdk_pixbuf_set_option (
   GdkPixbuf $pixbuf,
   Str       $key,
   Str       $value
-) 
+)
   returns uint32
   is      native(gdk-pixbuf)
   is      export
 { * }
 
-sub gdk_pixbuf_unref (GdkPixbuf $pixbuf) 
+sub gdk_pixbuf_unref (GdkPixbuf $pixbuf)
   is      native(gdk-pixbuf)
   is      export
 { * }
-

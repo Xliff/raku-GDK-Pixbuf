@@ -1,5 +1,7 @@
 use v6.c;
 
+use NativeCall;
+
 use GLib::Raw::Traits;
 use GDK::Pixbuf::Raw::Types;
 use GDK::Pixbuf::Raw::Core;
@@ -13,172 +15,461 @@ class GDK::Pixbuf {
   has GdkPixbuf $!gp is implementor;
 
   method new (
-    GdkColorspace $colorspace,
-    gboolean      $has_alpha,
-    gint          $bits_per_sample,
-    gint          $width,
-    gint          $height
+    Int() $colorspace,
+    Int() $has_alpha,
+    Int() $bits_per_sample,
+    Int() $width,
+    Int() $height
   ) {
-    gdk_pixbuf_new($!gp, $has_alpha, $bits_per_sample, $width, $height);
+    my GdkColorspace  $c          =  $colorspace;
+    my gboolean       $a          =  $has_alpha.so.Int;
+    my gint          ($b, $w, $h) = ($bits_per_sample, $width, $height);
+
+    my $gdk-pixbuf = gdk_pixbuf_new($c, $a, $b, $w, $h);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_bytes (
-    GdkColorspace $colorspace,
-    gboolean      $has_alpha,
-    gint          $bits_per_sample,
-    gint          $width,
-    gint          $height,
-    gint          $rowstride
+    GBytes() $data,
+    Int()    $colorspace,
+    Int()    $has_alpha,
+    Int()    $bits_per_sample,
+    Int()    $width,
+    Int()    $height,
+    Int()    $rowstride
   ) {
-    gdk_pixbuf_new_from_bytes($!gp, $data, $colorspace, $has_alpha, $bits_per_sample, $width, $height, $rowstride);
+    my GdkColorspace  $c =  $colorspace;
+    my gboolean       $a =  $has_alpha.so.Int;
+
+    my gint ($b, $w, $h, $r) =
+      ($bits_per_sample, $width, $height, $rowstride);
+
+    my $gdk-pixbuf = gdk_pixbuf_new_from_bytes($data, $c, $a, $b, $w, $h, $r);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
-  method new_from_data (
-    Str                    $data,
-    GdkColorspace          $colorspace,
-    gboolean               $has_alpha,
-    gint                   $bits_per_sample,
-    gint                   $width,
-    gint                   $height,
-    gint                   $rowstride,
-    GdkPixbufDestroyNotify $destroy_fn,
-    gpointer               $destroy_fn_data
+  constant \DC = %DEFAULT-CALLBACKS;
+
+  proto method new_from_data (|)
+  { * }
+  multi method new_from_data (
+              $data              where *.^can('Str'),
+    Int()     $colorspace,
+    Int()     $has_alpha,
+    Int()     $bits_per_sample,
+    Int()     $width,
+    Int()     $height,
+    Int()     $rowstride,
+    gpointer  $destroy_fn_data                         = gpointer,
+              &destroy_fn                              = DC<GDestroyNotify>,
+             :$encoding                                = 'utf8'
   ) {
-    gdk_pixbuf_new_from_data($!gp, $data, $colorspace, $has_alpha, $bits_per_sample, $width, $height, $rowstride, $destroy_fn, $destroy_fn_data);
+    my $ldata = $data;
+    $ldata .= Str unless $data ~~ Str;
+    samewith(
+      $ldata.encode($encoding),
+      $colorspace,
+      $has_alpha,
+      $bits_per_sample,
+      $width,
+      $height,
+      $rowstride,
+      &destroy_fn,
+      $destroy_fn_data
+    )
+  }
+  multi method new_from_data (
+    Blob           $data,
+    Int()          $colorspace,
+    Int()          $has_alpha,
+    Int()          $bits_per_sample,
+    Int()          $width,
+    Int()          $height,
+    Int()          $rowstride,
+                   &destroy_fn        = DC<GDestroyNotify>,
+    gpointer       $destroy_fn_data   = gpointer
+  ) {
+    samewith(
+      CArray[uint8].new($data);
+      $colorspace,
+      $has_alpha,
+      $bits_per_sample,
+      $width,
+      $height,
+      $rowstride,
+      &destroy_fn,
+      $destroy_fn_data
+    );
+  }
+  multi method new_from_data (
+                   @data,
+    Int()          $colorspace,
+    Int()          $has_alpha,
+    Int()          $bits_per_sample,
+    Int()          $width,
+    Int()          $height,
+    Int()          $rowstride,
+                   &destroy_fn        = DC<GDestroyNotify>,
+    gpointer       $destroy_fn_data   = gpointer
+  ) {
+    samewith(
+      ArrayToCArray(uint8, @data),
+      $colorspace,
+      $has_alpha,
+      $bits_per_sample,
+      $width,
+      $height,
+      $rowstride,
+      &destroy_fn,
+      $destroy_fn_data
+    );
+  }
+  multi method new_from_data (
+    CArray[uint8]  $data,
+    Int()          $colorspace,
+    Int()          $has_alpha,
+    Int()          $bits_per_sample,
+    Int()          $width,
+    Int()          $height,
+    Int()          $rowstride,
+                   &destroy_fn        = DC<GDestroyNotify>,
+    gpointer       $destroy_fn_data   = gpointer
+  ) {
+    my GdkColorspace  $c =  $colorspace;
+    my gboolean       $a =  $has_alpha.so.Int;
+
+    my gint ($b, $w, $h, $r) =
+      ($bits_per_sample, $width, $height, $rowstride);
+
+    my $gdk-pixbuf = gdk_pixbuf_new_from_data(
+      $data,
+      $c,
+      $a,
+      $b,
+      $w,
+      $h,
+      $r,
+      &destroy_fn,
+      $destroy_fn_data
+    );
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file (
-    Str                     $filename,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    CArray[Pointer[GError]] $error     = gerror
   ) {
-    gdk_pixbuf_new_from_file($!gp, $filename, $error);
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file($!gp, $filename, $error);
+    set_error($error);
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file_at_scale (
-    Str                     $filename,
-    gint                    $width,
-    gint                    $height,
-    gboolean                $preserve_aspect_ratio,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    Int()                   $width,
+    Int()                   $height,
+    Int()                   $preserve_aspect_ratio,
+    CArray[Pointer[GError]] $error                  = gerror
   ) {
-    gdk_pixbuf_new_from_file_at_scale($!gp, $filename, $width, $height, $preserve_aspect_ratio, $error);
+    my gint     ($w, $h) = ($width, $height);
+    my gboolean  $p      =  $preserve_aspect_ratio.so.Int;
+
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file_at_scale(
+      $filename,
+      $w,
+      $h,
+      $p,
+      $error
+    );
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file_at_scale_utf8 (
-    Str                     $filename,
-    gint                    $width,
-    gint                    $height,
-    gboolean                $preserve_aspect_ratio,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    Int()                   $width,
+    Int()                   $height,
+    Int()                   $preserve_aspect_ratio,
+    CArray[Pointer[GError]] $error                  = gerror
   ) {
-    gdk_pixbuf_new_from_file_at_scale_utf8($!gp, $filename, $width, $height, $preserve_aspect_ratio, $error);
+    my gint     ($w, $h) = ($width, $height);
+    my gboolean  $p      =  $preserve_aspect_ratio.so.Int;
+
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8(
+      $filename,
+      $w,
+      $h,
+      $p,
+      $error
+    );
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file_at_size (
-    Str                     $filename,
-    gint                    $width,
-    gint                    $height,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    Int()                   $width,
+    Int()                   $height,
+    CArray[Pointer[GError]] $error     = gerror
   ) {
-    gdk_pixbuf_new_from_file_at_size($!gp, $filename, $width, $height, $error);
+    my gint ($w, $h) = ($width, $height);
+
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file_at_size(
+      $filename,
+      $w,
+      $h,
+      $error
+    );
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file_at_size_utf8 (
-    Str                     $filename,
-    gint                    $width,
-    gint                    $height,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    Int()                   $width,
+    Int()                   $height,
+    CArray[Pointer[GError]] $error     = gerror
   ) {
+    my gint ($w, $h) = ($width, $height);
 
-    gdk_pixbuf_new_from_file_at_size_utf8($!gp, $filename, $width, $height, $error);
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file_at_size_utf8(
+      $filename,
+      $w,
+      $h,
+      $error
+    );
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_file_utf8 (
-    Str                     $filename,
-    CArray[Pointer[GError]] $error
+    Str()                   $filename,
+    CArray[Pointer[GError]] $error      = gerror
   ) {
-    gdk_pixbuf_new_from_file_utf8($!gp, $filename, $error);
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_file_utf8($filename, $error);
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
-  method new_from_inline (
-    gint                    $data_length,
-    guint8                  $data is rw,
-    gboolean                $copy_pixels,
-    CArray[Pointer[GError]] $error
+  proto method new_from_inline (|)
+  { * }
+
+  multi method new_from_inline (
+                             $data where *.^can('Str'),
+    CArray[Pointer[GError]]  $error                     = gerror,
+                            :$encoding                  = 'utf8',
+    Int()                   :copy(:copy-pixels(
+                              :$copy_pixels
+                            ))                          = False
   ) {
-    gdk_pixbuf_new_from_inline($!gp, $data_length, $data, $copy_pixels, $error);
+    my $ldata = $data;
+    $ldata .= Str unless $data ~~ Str;
+    samewith(
+       $ldata.encode($encoding),
+       $error,
+      :$copy_pixels
+    );
+  }
+  multi method new_from_inline (
+    Blob                     $data,
+    CArray[Pointer[GError]]  $error               = gerror,
+    Int()                   :copy(:copy-pixels(
+                              :$copy_pixels
+                            ))                    = False
+  ) {
+    samewith(
+      $data.bytes,
+      CArray[uint8].new($data),
+      $copy_pixels,
+      $error
+    );
+  }
+  multi method new_from_inline (
+                             @data,
+    CArray[Pointer[GError]]  $error               = gerror,
+    Int()                   :copy(:copy-pixels(
+                              :$copy_pixels
+                            ))                    = False
+  ) {
+    samewith(
+      @data.elems,
+      ArrayToCArray(uint8, @data),
+      $copy_pixels,
+      $error
+    );
+  }
+  multi method new_from_inline (
+    Int()                   $data_length,
+    CArray[uint8]           $data         is rw,
+    Int()                   $copy_pixels,
+    CArray[Pointer[GError]] $error               = gerror
+  ) {
+    my gint     $d = $data_length;
+    my gboolean $c = $copy_pixels;
+
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_inline($d, $data, $c, $error);
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_resource (
-    Str                     $resource_path,
-    CArray[Pointer[GError]] $error
+    Str()                   $resource_path,
+    CArray[Pointer[GError]] $error          = gerror
   ) {
-    gdk_pixbuf_new_from_resource($!gp, $resource_path, $error);
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_resource($resource_path, $error);
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_resource_at_scale (
-    Str                     $resource_path,
-    gint                    $width,
-    gint                    $height,
-    gboolean                $preserve_aspect_ratio,
-    CArray[Pointer[GError]] $error
+    Str()                   $resource_path,
+    Int()                   $width,
+    Int()                   $height,
+    Int()                   $preserve_aspect_ratio,
+    CArray[Pointer[GError]] $error                  = gerror
   ) {
-    gdk_pixbuf_new_from_resource_at_scale($!gp, $resource_path, $width, $height, $preserve_aspect_ratio, $error);
+    my gint     ($w, $h) = ($width, $height);
+    my gboolean  $p      =  $preserve_aspect_ratio.so.Int;
+
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_resource_at_scale(
+      $resource_path,
+      $w,
+      $h,
+      $p,
+      $error
+    );
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_stream (
-    GInputStream            $stream,
-    GCancellable            $cancellable,
-    CArray[Pointer[GError]] $error
+    GInputStream()          $stream,
+    GCancellable()          $cancellable = GCancellable,
+    CArray[Pointer[GError]] $error       = gerror
   ) {
-    gdk_pixbuf_new_from_stream($!gp, $stream, $cancellable, $error);
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_stream(
+      $stream,
+      $cancellable,
+      $error
+    );
+    set_error($error);
+
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
-  method new_from_stream_async (
-    GInputStream        $stream,
-    GCancellable        $cancellable,
-    GAsyncReadyCallback $callback,
-    gpointer            $user_data
+  proto method new_from_stream_async (|)
+  { * }
+
+  multi method new_from_stream_async (
+    GInputStream()  $stream,
+                    &callback,
+    gpointer        $user_data   = gpointer,
+    GCancellable() :$cancellable = GCancellable
   ) {
-    gdk_pixbuf_new_from_stream_async($!gp, $stream, $cancellable, $callback, $user_data);
+    samewith($stream, $cancellable, &callback, $user_data);
+  }
+  multi method new_from_stream_async (
+    GInputStream() $stream,
+    GCancellable() $cancellable,
+                   &callback,
+    gpointer       $user_data     = gpointer
+  ) {
+    my $gdk-pixbuf = gdk_pixbuf_new_from_stream_async(
+      $stream,
+      $cancellable,
+      &callback,
+      $user_data
+    );
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
   method new_from_stream_at_scale (
-    GInputStream            $stream,
-    gint                    $width,
-    gint                    $height,
-    gboolean                $preserve_aspect_ratio,
-    GCancellable            $cancellable,
-    CArray[Pointer[GError]] $error
+    GInputStream()          $stream,
+    Int()                   $width,
+    Int()                   $height,
+    Int()                   $preserve_aspect_ratio,
+    GCancellable()          $cancellable            = GCancellable,
+    CArray[Pointer[GError]] $error                  = gerror
   ) {
-    gdk_pixbuf_new_from_stream_at_scale($!gp, $stream, $width, $height, $preserve_aspect_ratio, $cancellable, $error);
+    my gint     ($w, $h) = ($width, $height);
+    my gboolean  $p      =  $preserve_aspect_ratio.so.Int;
+
+    clear_error;
+    my $gdk-pixbuf = gdk_pixbuf_new_from_stream_at_scale(
+      $stream,
+      $w,
+      $h,
+      $p,
+      $cancellable,
+      $error
+    );
+    set_error($error);
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
-  method new_from_stream_at_scale_async (
-    GInputStream        $stream,
-    gint                $width,
-    gint                $height,
-    gboolean            $preserve_aspect_ratio,
-    GCancellable        $cancellable,
-    GAsyncReadyCallback $callback,
-    gpointer            $user_data
+  proto method new_from_stream_at_scale_async (|)
+  { * }
+
+  multi method new_from_stream_at_scale_async (
+    GInputStream()  $stream,
+    Int()           $width,
+    Int()           $height,
+                    &callback,
+    gpointer        $user_data                         = gpointer,
+    Int()          :preserve(:preserve-aspect-ration(
+                      :$preserve_aspect_ratio
+                    ))                                 = True,
+    GCancellable() :$cancellable                       = GCancellable
   ) {
-    gdk_pixbuf_new_from_stream_at_scale_async($!gp, $stream, $width, $height, $preserve_aspect_ratio, $cancellable, $callback, $user_data);
+    samewith(
+      $stream,
+      $width,
+      $height,
+      $preserve_aspect_ratio,
+      $cancellable,
+      &callback,
+      $user_data
+    );
+  }
+  multi method new_from_stream_at_scale_async (
+    GInputStream() $stream,
+    Int()          $width,
+    Int()          $height,
+    Int()          $preserve_aspect_ratio,
+    GCancellable() $cancellable,
+                   &callback,
+    gpointer       $user_data              = gpointer
+  ) {
+    my gint     ($w, $h) = ($width, $height);
+    my gboolean  $p      =  $preserve_aspect_ratio.so.Int;
+
+    my $gdk-pixbuf = gdk_pixbuf_new_from_stream_at_scale_async(
+      $stream,
+      $w,
+      $h,
+      $p,
+      $cancellable,
+      &callback,
+      $user_data
+    );
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
@@ -197,14 +488,17 @@ class GDK::Pixbuf {
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
 
-  method new_from_xpm_data (Str() $data) {
+  proto method new_from_xpm_data (|)
+  { * }
+
+  multi method new_from_xpm_data (Str() $data) {
     samewith($data.lines);
   }
-  method new_from_xpm_data (@data) [
+  multi method new_from_xpm_data (@data) {
     samewith( ArrayToCArray(Str, @data) );
   }
-  method new_from_xpm_data (CArray[Str] $data) {
-    my $gdk-pixbuf = gdk_pixbuf_new_from_xpm_data($!gp, $data);
+  multi method new_from_xpm_data (CArray[Str] $data) {
+    my $gdk-pixbuf = gdk_pixbuf_new_from_xpm_data($data);
 
     $gdk-pixbuf ?? self.bless( :$gdk-pixbuf ) !! Nil;
   }
@@ -230,16 +524,16 @@ class GDK::Pixbuf {
     samewith(False, 0, 0, 0);
   }
   multi method add_alpha (
-    Int()  $substitute_color,
-    Int()  $r,
-    Int()  $g,
-    Int()  $b
+    Int()   $substitute_color,
+    Str()   $r,
+    Str()   $g,
+    Str()   $b,
+           :$raw               = False
   ) {
     my gboolean $s             =  $substitute_color;
-    my uint8   ($rr, $gg, $bb) = ($r, $g, $b);
 
     propReturnObject(
-      gdk_pixbuf_add_alpha($!gp, $s, $rr, $gg, $bb),
+      gdk_pixbuf_add_alpha($!gp, $s, $r, $g, $b),
       $raw,
       |self.getTypePair
     );
@@ -256,10 +550,10 @@ class GDK::Pixbuf {
     Int()           $width,
     Int()           $height
   ) {
-    my gboolean  $h          =  $has_alpha;
+    my gboolean  $a          =  $has_alpha;
     my gint     ($b, $w, $h) = ($bits_per_sample, $width, $height);
 
-    gdk_pixbuf_calculate_rowstride($!gp, $h, $b, $w, $h);
+    gdk_pixbuf_calculate_rowstride($!gp, $a, $b, $w, $h);
   }
 
   method copy ( :$raw = False ) {
@@ -270,53 +564,225 @@ class GDK::Pixbuf {
     );
   }
 
-  method composite (
-    GdkPixbuf     $dest,
-    gint          $dest_x,
-    gint          $dest_y,
-    gint          $dest_width,
-    gint          $dest_height,
-    gdouble       $offset_x,
-    gdouble       $offset_y,
-    gdouble       $scale_x,
-    gdouble       $scale_y,
-    GdkInterpType $interp_type,
-    gint          $overall_alpha
+  proto method composite (|)
+  { * }
+
+  multi method composite (
+    GdkPixbuf()                      $src,
+    Int()       :x(    :dest-x(     :$dest_x))        = 0,
+    Int()       :y(    :dest-y(     :$dest_y))        = 0,
+    Int()       :w(    :dest-width( :$dest_width))    = gdk_pixbuf_get_width(
+                                                          $src
+                                                        ),
+    Int()       :h(    :dest-height(:$dest_height))   = gdk_pixbuf_get_height(
+                                                          $src
+                                                        ),
+    Num()       :o(                 :$offset)         = 0e0,
+    Num()       :ox(   :offset-x(   :$offset_x))      = $offset,
+    Num()       :oy(   :offset-y(   :$offset_y))      = $offset,
+    Num()       :s(                 :$scale)          = 1e0,
+    Num()       :sx(   :scale-x(    :$scale_x))       = $scale,
+    Num()       :sy(   :scale-y(    :$scale_y))       = $scale,
+    Int()       :type( :interp-type(:$interp_type))   = 0,
+    Int()       :a(    :alpha(      :$overall_alpha)) = 255
   ) {
-    gdk_pixbuf_composite($!gp, $dest, $dest_x, $dest_y, $dest_width, $dest_height, $offset_x, $offset_y, $scale_x, $scale_y, $interp_type, $overall_alpha);
+    samewith(
+      $src,
+      $dest_x,
+      $dest_y,
+      $dest_width,
+      $dest_height,
+      $offset_x,
+      $offset_y,
+      $scale_x,
+      $scale_y,
+      $interp_type,
+      $overall_alpha
+    )
+  }
+  multi method composite (
+    GdkPixbuf() $src,
+    Int()       $dest_x,
+    Int()       $dest_y,
+    Int()       $dest_width,
+    Int()       $dest_height,
+    Num()       $offset_x,
+    Num()       $offset_y,
+    Num()       $scale_x,
+    Num()       $scale_y,
+    Int()       $interp_type,
+    Int()       $overall_alpha
+  ) {
+    my GdkInterpType $i = $interp_type;
+
+    my gint ($x, $y, $dw, $dh, $o) =
+      ($dest_x, $dest_y, $dest_width, $dest_height, $overall_alpha);
+
+    my gdouble ($ox, $oy, $sx, $sy) =
+      ($offset_x, $offset_y, $scale_x, $scale_y);
+
+    gdk_pixbuf_composite(
+      $src,
+      $!gp,
+      $x,
+      $y,
+      $dw,
+      $dh,
+      $ox,
+      $oy,
+      $sx,
+      $sy,
+      $i,
+      $o
+    );
+    self;
   }
 
-  method composite_color (
-    GdkPixbuf     $dest,
-    gint          $dest_x,
-    gint          $dest_y,
-    gint          $dest_width,
-    gint          $dest_height,
-    gdouble       $offset_x,
-    gdouble       $offset_y,
-    gdouble       $scale_x,
-    gdouble       $scale_y,
-    GdkInterpType $interp_type,
-    gint          $overall_alpha,
-    gint          $check_x,
-    gint          $check_y,
-    gint          $check_size,
-    guint32       $color1,
-    guint32       $color2
+  proto method composite_color (|)
+  { * }
+
+  multi method composite_color (
+    GdkPixbuf() $src,
+    Int()       :x(    :dest-x(     :$dest_x))        = 0,
+    Int()       :y(    :dest-y(     :$dest_y))        = 0,
+    Int()       :w(    :dest-width( :$dest_width))    = gdk_pixbuf_get_width(
+                                                          $src
+                                                        ),
+    Int()       :h(    :dest-height(:$dest_height))   = gdk_pixbuf_get_height(
+                                                          $src
+                                                        ),
+    Num()       :o(                 :$offset)         = 0e0,
+    Num()       :ox(   :offset-x(   :$offset_x))      = $offset,
+    Num()       :oy(   :offset-y(   :$offset_y))      = $offset,
+    Num()       :s(                 :$scale)          = 1e0,
+    Num()       :sx(   :scale-x(    :$scale_x))       = $scale,
+    Num()       :sy(   :scale-y(    :$scale_y))       = $scale,
+    Int()       :type( :interp-type(:$interp_type))   = 0,
+    Int()       :a(    :alpha(      :$overall_alpha)) = 255,
+    Int()       :cx(   :check-x(    :$check_x))       = 0,
+    Int()       :cy(   :check-y(    :$check_y))       = 0,
+    Int()       :cs(   :check-size( :$check_size))    = (
+                                                          $dest_width,
+                                                          $dest_height
+                                                        ).min.Int div 8,
+    Int()       :c1(                 :$color1),
+    Int()       :c2(                 :$color2)
   ) {
-    gdk_pixbuf_composite_color($!gp, $dest, $dest_x, $dest_y, $dest_width, $dest_height, $offset_x, $offset_y, $scale_x, $scale_y, $interp_type, $overall_alpha, $check_x, $check_y, $check_size, $color1, $color2);
+    samewith(
+      $src,
+      $dest_x,
+      $dest_y,
+      $dest_width,
+      $dest_height,
+      $offset_x,
+      $offset_y,
+      $scale_x,
+      $scale_y,
+      $interp_type,
+      $overall_alpha,
+      $check_x,
+      $check_y,
+      $check_size,
+      $color1,
+      $color2
+    );
+  }
+  multi method composite_color (
+    GdkPixbuf() $src,
+    Int()       $dest_x,
+    Int()       $dest_y,
+    Int()       $dest_width,
+    Int()       $dest_height,
+    Num()       $offset_x,
+    Num()       $offset_y,
+    Num()       $scale_x,
+    Num()       $scale_y,
+    Int()       $interp_type,
+    Int()       $overall_alpha,
+    Int()       $check_x,
+    Int()       $check_y,
+    Int()       $check_size,
+    Int()       $color1,
+    Int()       $color2
+  ) {
+    my GdkInterpType $i = $interp_type;
+
+    my gint ($dx, $dy, $dw, $dh, $o) =
+      ($dest_x, $dest_y, $dest_width, $dest_height, $overall_alpha);
+
+    my gint ($cx, $cy, $cs) = ($check_x, $check_y, $check_size);
+
+    my gdouble ($ox, $oy, $sx, $sy) =
+      ($offset_x, $offset_y, $scale_x, $scale_y);
+
+    my guint32 ($c1, $c2) = ($color1, $color2);
+
+    gdk_pixbuf_composite_color(
+      $src,
+      $!gp,
+      $dx,
+      $dy,
+      $dw,
+      $dh,
+      $ox,
+      $oy,
+      $sx,
+      $sy,
+      $i,
+      $o,
+      $cx,
+      $cy,
+      $cs,
+      $c1,
+      $c2
+    );
+    self;
   }
 
-  method composite_color_simple (
-    gint          $dest_width,
-    gint          $dest_height,
-    GdkInterpType $interp_type,
-    gint          $overall_alpha,
-    gint          $check_size,
-    guint32       $color1,
-    guint32       $color2
+  proto method composite_color_simple (|)
+  { * }
+
+  multi method composite_color_simple (
+    Int()       :w(    :dest-width( :$dest_width))    = self.get_width,
+    Int()       :h(    :dest-height(:$dest_height))   = self.get_height,
+    Int()       :type( :interp-type(:$interp_type))   = 0,
+    Int()       :a(    :alpha(      :$overall_alpha)) = 255,
+    Int()       :cs(   :check-size( :$check_size))    = (
+                                                          $dest_width,
+                                                          $dest_height
+                                                        ).min.Int div 8,
+    Int()       :c1(                :$color1),
+    Int()       :c2(                :$color2)
   ) {
-    gdk_pixbuf_composite_color_simple($!gp, $dest_width, $dest_height, $interp_type, $overall_alpha, $check_size, $color1, $color2);
+    samewith(
+      $dest_width,
+      $dest_height,
+      $interp_type,
+      $overall_alpha,
+      $check_size,
+      $color1,
+      $color2
+    );
+  }
+  multi method composite_color_simple (
+    Int()       $dest_width,
+    Int()       $dest_height,
+    Int()       $interp_type,
+    Int()       $overall_alpha,
+    Int()       $check_size,
+    Int()       $color1,
+    Int()       $color2
+  ) {
+    my GdkInterpType $i = $interp_type;
+
+    my gint ($dw, $dh, $o) = ($dest_width, $dest_height, $overall_alpha);
+
+    my gint $c = $check_size;
+
+    my guint32 ($c1, $c2) = ($color1, $color2);
+
+    gdk_pixbuf_composite_color_simple($!gp, $dw, $dh, $i, $o, $c, $c1, $c2);
+    self
   }
 
   # Add multi that returns GdkPixbuf
@@ -328,9 +794,9 @@ class GDK::Pixbuf {
     GdkPixbuf() $dest_pixbuf,
     Int()       $dest_x       = $src_x,
     Int()       $dest_y       = $src_y
-  )
+  ) {
     my gint ($sx, $sy, $w, $h, $dx, $dy) =
-      ($src_x, $src_y, $width, $height, $dest_x, $dest_y)
+      ($src_x, $src_y, $width, $height, $dest_x, $dest_y);
 
     gdk_pixbuf_copy_area($!gp, $sx, $sy, $w, $h, $dest_pixbuf, $dx, $dy);
   }
@@ -465,21 +931,20 @@ class GDK::Pixbuf {
     );
   }
 
-  method scale (
-    GdkPixbuf() $dest,
-    Int()       :dx(:dest-x(:$dest_x))                  = 0,
-    Int()       :dy(:dest-y(:$dest_y))                  = 0,
-    Num()       :ox(:offset-x(:$offset_x))              = 0e0,
-    Num()       :oy(:offset-y(:$offset_y))              = 0e0,
-    Num()       :f(:s(:fac(:scale(:$factor))))          = 1e0,
-    Num()       :sx(:scale-x(:$scale_x))                = $factor // 1e0,
-    Num()       :sy(:scale-y(:$scale_y))                = $factor // 1e0,
-    Int()       :w(:dest-width(:dest_width(:$width)))   = self.get_width  * $scale_x,
-    Int()       :h(:dest-height(:dest_height(:$height)) = self.get_height * $scale_y,
-    Int()       :t(:interp_type(:$type))                = 0
+  multi method scale (
+    Int()       :x( :dest-x(                  :$dest_x))   = 0,
+    Int()       :y( :dest-y(                  :$dest_y))   = 0,
+    Num()       :ox(:offset-x(                :$offset_x)) = 0e0,
+    Num()       :oy(:offset-y(                :$offset_y)) = 0e0,
+    Num()       :s(                           :$scale)     = 1e0,
+    Num()       :sx(:scale-x(                 :$scale_x))  = $scale // 1e0,
+    Num()       :sy(:scale-y(                 :$scale_y))  = $scale // 1e0,
+    Int()       :w( :dest-width( :dest_width( :$width)))   = self.get_width  * $scale_x,
+    Int()       :h( :dest-height(:dest_height(:$height)))  = self.get_height * $scale_y,
+    Int()       :t( :interp_type(             :$type))     = 0
   ) {
     samewith(
-      $dest,
+      $!gp,
       $dest_x,
       $dest_y,
       $width,
@@ -491,7 +956,7 @@ class GDK::Pixbuf {
       $type
     );
   }
-  method scale (
+  multi method scale (
     GdkPixbuf() $dest,
     Int()       $dest_x,
     Int()       $dest_y,
@@ -542,37 +1007,35 @@ class GDK::Pixbuf {
     );
   }
 
-  method saturate_and_pixelate (Int() $saturation, Int() $pixelate) {
+  # cw: This will require another multi!
+  method saturate_and_pixelate (
+    GdkPixbuf() $dest,
+    Int()       $saturation,
+    Int()       $pixelate
+  ) {
     my gfloat   $s = $saturation;
     my gboolean $p = $pixelate;
 
     gdk_pixbuf_saturate_and_pixelate($!gp, $dest, $s, $p);
   }
 
-  method save (
-    Str()                   $filename,
-    Str()                   $type,
-    CArray[Pointer[GError]] $error      = gerror
-  ) {
-    gdk_pixbuf_save($!gp, $filename, $type, $error, Str);
-  }
-
+  # cw: Definmitely squirrely!
   method save_to_buffer (
-    CArray[CArray[uint8]]    $buffer,
-                             $buffer_size is rw,
     Str                      $type,
     CArray[Pointer[GError]]  $error              = gerror,
-                            :$all                = False,
+                            *@options,
                             :$buf                = False
   ) {
-    my gsize $b = 0;
+    X::GLib::InvalidNumberOfArguments.new(
+      message => '@options must have an even number (key, value)!'
+    ).throw unless @options.elems % 2 == 0;
 
-    clear_error;
-    my $rv = so gdk_pixbuf_save_to_buffer($!gp, $buffer, $b, $type, $error);
-    set_error($error);
-    (my $return-buf, $buffer_size) = ($buffer, $b);
-    $return-buf = Buf.new( $return-buf[0] ) if $buf;
-    $all.not ?? $rv !! ($rv, $return-buf, $buffer_size);
+    self.save_to_bufferv(
+       $type,
+       @options.Hash,
+       $error,
+      :$buf
+    );
   }
 
   proto method save_to_bufferv (|)
@@ -582,7 +1045,7 @@ class GDK::Pixbuf {
     Str()                    $type,
     CArray[Pointer[GError]]  $error        = gerror,
                             :$buf          = False,
-                            *%options      = ().Hash
+                            *%options
   ) {
     samewith(
       newCArray( CArray[uint8] ),
@@ -593,35 +1056,35 @@ class GDK::Pixbuf {
       :$buf
     )
   }
-  method save_to_bufferv (
+  multi method save_to_bufferv (
     Str()                    $type,
-    Hash()                   $options,
-    CArray[Pointer[GError]]  $error    = gerror,
-                            :$buf      = False
+                             %options = ().Hash,
+    CArray[Pointer[GError]]  $error   = gerror,
+                            :$buf     = False
   ) {
     my @options = %options.pairs.sort( *.key );
     my @keys    = @options.map( *.key );
     my @values  = @options.map( *.value );
 
-    return-with-all
+    return-with-all(
       samewith(
         newCArray( CArray[uint8] ),
         $,
         $type,
         $error,
-        ArrayToCArray(Str, @keys),
-        ArrayToCArray(Str, @values),
+        ArrayToCArray(Str, @keys  , :null),
+        ArrayToCArray(Str, @values, :null),
         :all,
         :$buf
       )
     )
   }
-  method save_to_bufferv (
+  multi method save_to_bufferv (
     CArray[CArray[uint8]]    $buffer,
                              $buffer_size     is rw,
     Str()                    $type,
-    CArray[Str]              $option_keys,
-    CArray[Str]              $option_values,
+    CArray[Str]              $option_keys             = CArray[Str],
+    CArray[Str]              $option_values           = CArray[Str],
     CArray[Pointer[GError]]  $error                   = gerror,
                             :$buf                     = False,
                             :$all                     = False
@@ -645,95 +1108,467 @@ class GDK::Pixbuf {
   }
 
   method save_to_callback (
-    GdkPixbufSaveFunc       $save_func,
+    Str()                     $type,
+                              &save_func,
+    gpointer                  $user_data  = gpointer,
+    CArray[Pointer[GError]]   $error      = gerror,
+                             *@options
+  ) {
+    X::GLib::InvalidNumberOfArguments.new(
+      message => '@options must have an even number (key, value)!'
+    ).throw unless @options.elems % 2 == 0;
+
+    my %options = @options.Hash;
+
+    self.save_to_callbackv(
+      &save_func,
+      $user_data,
+      $type,
+      %options,
+      $error,
+    );
+  }
+
+  proto method save_to_callbackv (|)
+  { * }
+
+  multi method save_to_callbackv (
+    Str()                    $type,
+                             &save_func,
+    gpointer                 $user_data  = gpointer,
+    CArray[Pointer[GError]]  $error      = gerror,
+                            *%options
+  ) {
+    samewith(
+       $type,
+       &save_func,
+       $user_data,
+       $error,
+      :%options
+    );
+  }
+  multi method save_to_callbackv (
+    Str()                    $type,
+                             &save_func,
+                             %options    = ().Hash,
+    gpointer                 $user_data  = gpointer,
+    CArray[Pointer[GError]]  $error      = gerror,
+  ) {
+    my @opt-array = %options.pairs;
+    samewith(
+      $type,
+      &save_func,
+      $user_data,
+      k           => @opt-array.map( *.keys ),
+      v           => @opt-array.map( *.values ),
+      $error
+    );
+  }
+  multi method save_to_callbackv (
+    Str()                                $type,
+                                         &save_func,
+    gpointer                             $user_data       = gpointer,
+    CArray[Pointer[GError]]              $error           = gerror,
+                            :k(:keys(   :@option_keys))   = (),
+                            :v(:values( :@option_values)) = (),
+  ) {
+    samewith(
+      &save_func,
+      $user_data,
+      $type,
+      ArrayToCArray(Str, @option_keys  , :null),
+      ArrayToCArray(Str, @option_values, :null),
+      $error
+    );
+  }
+  multi method save_to_callbackv (
+                            &save_func,
     gpointer                $user_data,
-    Str                     $type,
-    CArray[Pointer[GError]] $error
+    Str()                   $type,
+    CArray[Str]             $option_keys   = CArray[Str],
+    CArray[Str]             $option_values = CArray[Str],
+    CArray[Pointer[GError]] $error         = gerror
   ) {
-    gdk_pixbuf_save_to_callback($!gp, $save_func, $user_data, $type, $error);
+    clear_error;
+    my $rv = gdk_pixbuf_save_to_callbackv(
+      $!gp,
+      &save_func,
+      $user_data,
+      $type,
+      $option_keys,
+      $option_values,
+      $error
+    );
+    set_error($error);
+    $rv;
   }
 
-  method save_to_callbackv (
-    GdkPixbufSaveFunc       $save_func,
-    gpointer                $user_data,
-    Str                     $type,
-    CArray[Str]             $option_keys,
-    CArray[Str]             $option_values,
-    CArray[Pointer[GError]] $error
-  ) {
-    gdk_pixbuf_save_to_callbackv($!gp, $save_func, $user_data, $type, $option_keys, $option_values, $error);
-  }
 
-  method save_to_stream (
-    GOutputStream           $stream,
-    Str                     $type,
-    GCancellable            $cancellable,
-    CArray[Pointer[GError]] $error
-  ) {
-    gdk_pixbuf_save_to_stream($!gp, $stream, $type, $cancellable, $error);
-  }
+  proto method save_to_stream_async (|)
+  { * }
 
-  method save_to_stream_async (
-    GOutputStream       $stream,
-    Str                 $type,
-    GCancellable        $cancellable,
-    GAsyncReadyCallback $callback,
-    gpointer            $user_data
+  multi method save_to_stream_async (
+    GOutputStream()      $stream,
+    Str()                $type,
+                         &callback,
+    gpointer             $user_data   = gpointer,
+    GCancellable()      :$cancellable = GCancellable
   ) {
-    gdk_pixbuf_save_to_stream_async($!gp, $stream, $type, $cancellable, $callback, $user_data);
+    samewith(
+      $stream,
+      $type,
+      $cancellable,
+      &callback,
+      $user_data
+    );
+  }
+  multi method save_to_stream_async (
+    GOutputStream()     $stream,
+    Str()               $type,
+    GCancellable()      $cancellable,
+                        &callback,
+    gpointer            $user_data    = gpointer
+  ) {
+    gdk_pixbuf_save_to_stream_async(
+      $!gp,
+      $stream,
+      $type,
+      $cancellable,
+      &callback,
+      $user_data
+    );
   }
 
   method save_to_stream_finish (
-    GAsyncResult            $async_result,
-    CArray[Pointer[GError]] $error
-  ) {
-    gdk_pixbuf_save_to_stream_finish($!gp, $error);
+    GAsyncResult()          $async_result,
+    CArray[Pointer[GError]] $error         = gerror
+  )
+    is static
+  {
+    clear_error;
+    my $rv = gdk_pixbuf_save_to_stream_finish($async_result, $error);
+    set_error($error);
+    $rv;
   }
 
-  method save_to_streamv (
-    GOutputStream           $stream,
-    Str                     $type,
-    CArray[Str]             $option_keys,
-    CArray[Str]             $option_values,
-    GCancellable            $cancellable,
-    CArray[Pointer[GError]] $error
+  method save_to_stream (
+    GOutputStream()           $stream,
+    Str()                     $type,
+    CArray[Pointer[GError]]   $error          = gerror,
+    GCancellable()           :$cancellable    = GCancellable,
+                             *@options
   ) {
-    gdk_pixbuf_save_to_streamv($!gp, $stream, $type, $option_keys, $option_values, $cancellable, $error);
+    self.save_to_streamv(
+       $stream,
+       $type,
+       @options.Hash,
+       $error,
+      :$cancellable
+    )
   }
 
-  method save_to_streamv_async (
-    GOutputStream       $stream,
-    Str                 $type,
+  proto method save_to_streamv (|)
+  { * }
+
+  multi method save_to_streamv (
+    GOutputStream()           $stream,
+    Str()                     $type,
+    CArray[Pointer[GError]]   $error          = gerror,
+    GCancellable()           :$cancellable    = GCancellable,
+                             *%options
+  ) {
+    samewith(
+       $stream,
+       %options,
+       $type,
+       $error,
+      :$cancellable
+    );
+  }
+  multi method save_to_streamv (
+    GOutputStream()          $stream,
+    Str()                    $type,
+                             %options,
+    CArray[Pointer[GError]]  $error          = gerror,
+    GCancellable()          :$cancellable    = GCancellable
+  ) {
+    my @opt-array = %options.pairs;
+    samewith(
+      $stream,
+      $type,
+      k             => @opt-array.map( *.keys ),
+      v             => @opt-array.map( *.values ),
+      $cancellable,
+      $error
+    )
+  }
+  multi method save_to_streamv (
+    GOutputStream()                      $stream,
+    Str()                                $type,
+    GCancellable()                       $cancellable     = GCancellable,
+    CArray[Pointer[GError]]              $error           = gerror,
+                            :k(:keys(   :@option_keys))   = (),
+                            :v(:values( :@option_values)) = (),
+  ) {
+    samewith(
+      $stream,
+      $type,
+      ArrayToCArray(Str, @option_keys  , :null),
+      ArrayToCArray(Str, @option_values, :null),
+      $cancellable,
+      $error
+    )
+  }
+  multi method save_to_streamv (
+    GOutputStream()         $stream,
+    Str()                   $type,
+    CArray[Str]             $option_keys    = CArray[Str],
+    CArray[Str]             $option_values  = CArray[Str],
+    GCancellable()          $cancellable    = GCancellable,
+    CArray[Pointer[GError]] $error          = gerror
+  ) {
+    clear_error;
+    my $rv = gdk_pixbuf_save_to_streamv(
+      $!gp,
+      $stream,
+      $type,
+      $option_keys,
+      $option_values,
+      $cancellable,
+      $error
+    );
+    set_error($error);
+    $rv;
+  }
+
+  proto method save_to_streamv_async (|)
+  { * }
+
+  multi method save_to_streamv_async (
+    GOutputStream()     $stream,
+    Str()               $type,
+                        &callback,
+    gpointer            $user_data      = gpointer,
+    GCancellable()     :$cancellable    = GCancellable,
+                       *%options
+  ) {
+    samewith(
+       $stream,
+       $type,
+       &callback,
+       %options,
+       $user_data,
+      :$cancellable
+    );
+  }
+  multi method save_to_streamv_async (
+    GOutputStream()     $stream,
+    Str()               $type,
+                        &callback,
+                        %options,
+    gpointer            $user_data      = gpointer,
+    GCancellable()     :$cancellable    = GCancellable
+  ) {
+    my @opt-array = %options.pairs;
+    samewith(
+      $stream,
+      $type,
+      &callback,
+      $user_data,
+      v            => @opt-array.map( *.values),
+      k            => @opt-array.map( *.keys),
+     :$cancellable
+    );
+  }
+  multi method save_to_streamv_async (
+    GOutputStream()     $stream,
+    Str()               $type,
+                        &callback,
+    gpointer            $user_data                    = gpointer,
+                       :v(:values( :@option_values))  = (),
+                       :k(:keys(   :@option_keys))    = (),
+    GCancellable()     :$cancellable                  = GCancellable
+  ) {
+    samewith(
+      $stream,
+      $type,
+      ArrayToCArray(Str, @option_keys  , :null),
+      ArrayToCArray(Str, @option_values, :null),
+      $cancellable,
+      &callback,
+      $user_data
+    );
+  }
+  multi method save_to_streamv_async (
+    GOutputStream()     $stream,
+    Str()               $type,
     CArray[Str]         $option_keys,
     CArray[Str]         $option_values,
     GCancellable        $cancellable,
-    GAsyncReadyCallback $callback,
-    gpointer            $user_data
+                        &callback,
+    gpointer            $user_data      = gpointer
   ) {
-    gdk_pixbuf_save_to_streamv_async($!gp, $stream, $type, $option_keys, $option_values, $cancellable, $callback, $user_data);
+    gdk_pixbuf_save_to_streamv_async(
+      $!gp,
+      $stream,
+      $type,
+      $option_keys,
+      $option_values,
+      $cancellable,
+      &callback,
+      $user_data
+    );
   }
 
-  method savev (
-    Str                     $filename,
-    Str                     $type,
-    CArray[Str]             $option_keys,
-    CArray[Str]             $option_values,
-    CArray[Pointer[GError]] $error
-  ) {
-    gdk_pixbuf_savev($!gp, $filename, $type, $option_keys, $option_values, $error);
+  multi method save ($filename, $type, $error, *@options) {
+    self.savev($filename, $type, @options.Hash, $error);
   }
 
-  method savev_utf8 (
-    Str                     $filename,
-    Str                     $type,
-    CArray[Str]             $option_keys,
-    CArray[Str]             $option_values,
-    CArray[Pointer[GError]] $error
+  multi method save (
+     $filename,
+     $type,
+     $error,
+    *@options,
+    :$utf8      is required
   ) {
-    gdk_pixbuf_savev_utf8($!gp, $filename, $type, $option_keys, $option_values, $error);
+    self.savev_utf8($filename, $type, @options.Hash, $error);
   }
 
-  method set_option (Str () $key, Str() $value) {
+  multi method savev (
+    Str()                    $filename,
+    Str()                    $type,
+    CArray[Pointer[GError]]  $error     = gerror,
+                            *%options
+  ) {
+    samewith(
+      $filename,
+      $type,
+      %options,
+      $error
+    );
+  }
+  multi method savev (
+    Str()                    $filename,
+    Str()                    $type,
+                             %options   = ().Hash,
+    CArray[Pointer[GError]]  $error     = gerror,
+  ) {
+    my @opt-array = %options.pairs;
+    samewith(
+      $filename,
+      $type,
+      @opt-array.map( *.keys ),
+      @opt-array.map( *.values ),
+      $error
+    );
+  }
+  multi method savev (
+    Str()                   $filename,
+    Str()                   $type,
+                            @option_keys,
+                            @option_values,
+    CArray[Pointer[GError]] $error         = gerror
+  ) {
+    samewith(
+      $filename,
+      $type,
+      ArrayToCArray(Str, @option_keys,   :null),
+      ArrayToCArray(Str, @option_values, :null),
+      $error
+    );
+  }
+  multi method savev (
+    Str()                   $filename,
+    Str()                   $type,
+    CArray[Str]             $option_keys   = CArray[Str],
+    CArray[Str]             $option_values = CArray[Str],
+    CArray[Pointer[GError]] $error         = gerror
+  ) {
+    clear_error;
+    my $rv = so gdk_pixbuf_savev(
+      $!gp,
+      $filename,
+      $type,
+      $option_keys,
+      $option_values,
+      $error
+    );
+    set_error($error);
+    $rv;
+  }
+
+  proto method savev_utf8 (|)
+  { * }
+
+  multi method savev_utf8 (
+    Str()                    $filename,
+    Str()                    $type,
+    CArray[Pointer[GError]]  $error     = gerror,
+                            *%options
+  ) {
+    samewith($filename, $type, %options, $error)
+  }
+  multi method savev_utf8 (
+    Str()                   $filename,
+    Str()                   $type,
+                            %options   = ().Hash,
+    CArray[Pointer[GError]] $error     = gerror
+  ) {
+    my @opt-array = %options.pairs;
+    samewith(
+      $filename,
+      $type,
+      k           => @opt-array.map( *.keys   ),
+      v           => @opt-array.map( *.values ),
+      $error
+    );
+  }
+  multi method savev_utf8 (
+    Str()                                 $filename,
+    Str()                                 $type,
+    CArray[Pointer[GError]]               $error           = gerror,
+                            :v(:values( :@option_values))  = (),
+                            :k(:keys(   :@option_keys))    = ()
+  ) {
+    samewith(
+      $filename,
+      $type,
+      ArrayToCArray(Str, @option_keys,   :null),
+      ArrayToCArray(Str, @option_values, :null),
+      $error
+    );
+  }
+  multi method savev_utf8 (
+    Str()                   $filename,
+    Str()                   $type,
+    CArray[Str]             $option_keys   = CArray[Str],
+    CArray[Str]             $option_values = CArray[Str],
+    CArray[Pointer[GError]] $error         = gerror
+  ) {
+    clear_error;
+    my $rv = gdk_pixbuf_savev_utf8(
+      $!gp,
+      $filename,
+      $type,
+      $option_keys,
+      $option_values,
+      $error
+    );
+    set_error($error);
+    $rv
+  }
+
+  proto method set_options (|)
+  { * }
+
+  multi method set_options (*%options) {
+    samewith(%options)
+  }
+  multi method set_options (%options) {
+    self.set_option( .key, .value ) for %options.pairs;
+  }
+
+  method set_option (Str() $key, Str() $value) {
     gdk_pixbuf_set_option($!gp, $key, $value);
   }
 
